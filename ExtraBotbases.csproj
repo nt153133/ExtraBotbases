@@ -32,9 +32,18 @@
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
     <ItemGroup>
+        <Reference Include="GreyMagic">
+          <HintPath>..\..\GreyMagic.dll</HintPath>
+        </Reference>
+        <Reference Include="PresentationCore" />
+        <Reference Include="PresentationFramework" />
+        <Reference Include="RebornBuddy">
+          <HintPath>..\..\RebornBuddy.exe</HintPath>
+        </Reference>
         <Reference Include="System" />
         <Reference Include="System.Core" />
         <Reference Include="System.Data" />
+        <Reference Include="System.Windows.Forms" />
         <Reference Include="System.Xml" />
     </ItemGroup>
     <ItemGroup>
@@ -52,6 +61,12 @@
     </ItemGroup>
     <ItemGroup>
       <EmbeddedResource Include="GCExpertTurnin\GCExpertSettingsFrm.resx" />
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\..\Quest Behaviors\__LlamaLibrary\LlamaLibrary.csproj">
+        <Project>{196ee308-0205-4cc4-b449-51064f7e9960}</Project>
+        <Name>LlamaLibrary</Name>
+      </ProjectReference>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -16,7 +16,6 @@ using ff14bot.Managers;
 using ff14bot.Navigation;
 using ff14bot.Pathing.Service_Navigation;
 using ff14bot.RemoteWindows;
-using LlamaBotBases.LlamaUtilities.Settings;
 using LlamaLibrary;
 using LlamaLibrary.Extensions;
 using LlamaLibrary.Helpers;
@@ -487,37 +486,6 @@ namespace LlamaBotBases.Tester
             return functions;
         }
 
-        public async Task<bool> RetainerCheck(RetainerInfo retainer)
-        {
-            if (retainer.Job != ClassJobType.Adventurer)
-            {
-                if (retainer.VentureTask != 0)
-                {
-                    var now = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
-                    var timeLeft = retainer.VentureEndTimestamp - now;
-
-                    if (timeLeft <= 0 && SpecialCurrencyManager.GetCurrencyCount(SpecialCurrency.Venture) > 2)
-                    {
-                        await CheckVentures();
-                    }
-                    else
-                    {
-                        Log.Information($"Venture will be done at {RetainerInfo.UnixTimeStampToDateTime(retainer.VentureEndTimestamp)}");
-                    }
-                }
-            }
-
-            if (RetainerSettings.Instance.DepositFromPlayer)
-            {
-                await RetainerRoutine.DumpItems();
-            }
-
-            Log.Information("Done checking against player inventory");
-
-            //Log.Debug($"{RetainerInfo.UnixTimeStampToDateTime(retainer.VentureEndTimestamp)}");
-
-            return true;
-        }
 
         public async Task<bool> CheckVentures()
         {
