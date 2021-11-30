@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media;
@@ -22,6 +24,7 @@ using LlamaLibrary.Helpers;
 using LlamaLibrary.JsonObjects;
 using LlamaLibrary.Logging;
 using LlamaLibrary.Memory;
+using LlamaLibrary.Memory.Attributes;
 using LlamaLibrary.RemoteAgents;
 using LlamaLibrary.RemoteWindows;
 using LlamaLibrary.Retainers;
@@ -99,7 +102,7 @@ namespace LlamaBotBases.Tester
         internal void Init()
         {
             OffsetManager.Init();
-
+            OffsetManager.SetOffsetClasses();
         }
 
         private static T LoadResource<T>(string text)
@@ -109,181 +112,26 @@ namespace LlamaBotBases.Tester
 
         public override void Start()
         {
+            Navigator.PlayerMover = new SlideMover();
+            Navigator.NavigationProvider = new ServiceNavigationProvider();
             _root = new ActionRunCoroutine(r => Run());
         }
 
         public override void Stop()
         {
             _root = null;
-        }
-
-        //TODO Move this somewhere...oh in the two functions below it
-        public static async Task InteractWithDenys(int selectString)
-        {
-            var npc = GameObjectManager.GetObjectByNPCId(1032900);
-            if (npc == null)
-            {
-                await Navigation.GetTo(418, new Vector3(-160.28f, 17.00897f, -55.8437f));
-                npc = GameObjectManager.GetObjectByNPCId(1032900);
-            }
-
-            if (npc != null && !npc.IsWithinInteractRange)
-            {
-                await Navigation.GetTo(418, new Vector3(-160.28f, 17.00897f, -55.8437f));
-            }
-
-            if (npc != null && npc.IsWithinInteractRange)
-            {
-                npc.Interact();
-                await Coroutine.Wait(10000, () => Conversation.IsOpen);
-                if (Conversation.IsOpen)
-                {
-                    Conversation.SelectLine((uint)selectString);
-                }
-            }
-        }
-
-        //TODO Move this somewhere...it's used in angles skysteel profile. There is one skysteel helper or something already
-        public static async Task TurninSkySteelGathering()
-        {
-            var GatheringItems = new Dictionary<uint, (uint Reward, uint Cost)>
-            {
-                { 31125, (30331, 10) },
-                { 31130, (30333, 10) },
-                { 31127, (30335, 10) },
-                { 31132, (30337, 10) },
-                { 31129, (30339, 10) },
-                { 31134, (30340, 10) }
-            };
-
-            var turninItems = InventoryManager.FilledSlots.Where(i => i.IsHighQuality && GatheringItems.Keys.Contains(i.RawItemId));
-
-            if (turninItems.Any())
-            {
-                await InteractWithDenys(3);
-                await Coroutine.Wait(10000, () => ShopExchangeItem.Instance.IsOpen);
-                if (ShopExchangeItem.Instance.IsOpen)
-                {
-                    Log.Verbose($"Window Open");
-                    foreach (var turnin in turninItems)
-                    {
-                        var reward = GatheringItems[turnin.RawItemId].Reward;
-                        var amt = turnin.Count / GatheringItems[turnin.RawItemId].Cost;
-                        Log.Information($"Buying {amt}x{DataManager.GetItem(reward).CurrentLocaleName}");
-                        await ShopExchangeItem.Instance.Purchase(reward, amt);
-                        await Coroutine.Sleep(500);
-                    }
-
-                    ShopExchangeItem.Instance.Close();
-                    await Coroutine.Wait(10000, () => !ShopExchangeItem.Instance.IsOpen);
-                }
-            }
-        }
-
-        //TODO Move this somewhere...it's used in angles skysteel profile. There is one skysteel helper or something already
-        public static async Task TurninSkySteelCrafting()
-        {
-            var TurnItemList = new Dictionary<uint, CraftingRelicTurnin>
-            {
-                { 31101, new CraftingRelicTurnin(31101, 0, 1, 2000, 30315) },
-                { 31109, new CraftingRelicTurnin(31109, 0, 0, 3000, 30316) },
-                { 31102, new CraftingRelicTurnin(31102, 1, 1, 2000, 30317) },
-                { 31110, new CraftingRelicTurnin(31110, 1, 0, 3000, 30318) },
-                { 31103, new CraftingRelicTurnin(31103, 2, 1, 2000, 30319) },
-                { 31111, new CraftingRelicTurnin(31111, 2, 0, 3000, 30320) },
-                { 31104, new CraftingRelicTurnin(31104, 3, 1, 2000, 30321) },
-                { 31112, new CraftingRelicTurnin(31112, 3, 0, 3000, 30322) },
-                { 31105, new CraftingRelicTurnin(31105, 4, 1, 2000, 30323) },
-                { 31113, new CraftingRelicTurnin(31113, 4, 0, 3000, 30324) },
-                { 31106, new CraftingRelicTurnin(31106, 5, 1, 2000, 30325) },
-                { 31114, new CraftingRelicTurnin(31114, 5, 0, 3000, 30326) },
-                { 31107, new CraftingRelicTurnin(31107, 6, 1, 2000, 30327) },
-                { 31115, new CraftingRelicTurnin(31115, 6, 0, 3000, 30328) },
-                { 31108, new CraftingRelicTurnin(31108, 7, 1, 2000, 30329) },
-                { 31116, new CraftingRelicTurnin(31116, 7, 0, 3000, 30330) }
-            };
-
-            var collectables = InventoryManager.FilledSlots.Where(i => i.IsCollectable).Select(x => x.RawItemId).Distinct();
-            var collectablesAll = InventoryManager.FilledSlots.Where(i => i.IsCollectable);
-
-            if (collectables.Any(i => TurnItemList.Keys.Contains(i)))
-            {
-                Log.Information("Have collectables");
-                foreach (var collectable in collectablesAll)
-                {
-                    if (TurnItemList.Keys.Contains(collectable.RawItemId))
-                    {
-                        var turnin = TurnItemList[collectable.RawItemId];
-                        if (collectable.Collectability < turnin.MinCollectability)
-                        {
-                            Log.Information($"Discarding {collectable.Name} is at {collectable.Collectability} which is under {turnin.MinCollectability}");
-                            collectable.Discard();
-                        }
-                    }
-                }
-
-                collectables = InventoryManager.FilledSlots.Where(i => i.IsCollectable).Select(x => x.RawItemId).Distinct();
-
-                await InteractWithDenys(2);
-                await Coroutine.Wait(10000, () => CollectablesShop.Instance.IsOpen);
-
-                if (CollectablesShop.Instance.IsOpen)
-                {
-                    Log.Verbose("Window open");
-                    foreach (var item in collectables)
-                    {
-                        Log.Information($"Turning in {DataManager.GetItem(item).CurrentLocaleName}");
-                        var turnin = TurnItemList[item];
-
-                        Log.Verbose($"Pressing job {turnin.Job}");
-                        CollectablesShop.Instance.SelectJob(turnin.Job);
-                        await Coroutine.Sleep(500);
-
-                        Log.Verbose($"Pressing position {turnin.Position}");
-                        CollectablesShop.Instance.SelectItem(turnin.Position);
-                        await Coroutine.Sleep(1000);
-                        var i = 0;
-                        while (CollectablesShop.Instance.TurninCount > 0)
-                        {
-                            Log.Verbose($"Pressing trade {i}");
-                            i++;
-                            CollectablesShop.Instance.Trade();
-                            await Coroutine.Sleep(100);
-                        }
-                    }
-
-                    CollectablesShop.Instance.Close();
-                    await Coroutine.Wait(10000, () => !CollectablesShop.Instance.IsOpen);
-                }
-            }
+            (Navigator.NavigationProvider as IDisposable)?.Dispose();
+            Navigator.NavigationProvider = null;
         }
 
         private Task<bool> Run()
         {
-            Log.Information($"HomeWorldId: {WorldHelper.HomeWorldId}, CurrentWorldId: {WorldHelper.CurrentWorldId}, DataCenterId: {WorldHelper.DataCenterId}");
-
-            Navigator.PlayerMover = new SlideMover();
-            Navigator.NavigationProvider = new ServiceNavigationProvider();
-            var DeliveryNpcs = new List<CustomDeliveryNpc>()
-            {
-                new CustomDeliveryNpc( 1019615,478, new Vector3(-71.68203f, 206.5714f, 29.38501f), "Zhloe Aliapoh", 67087, 1), //(Zhloe Aliapoh) Idyllshire(Dravania)
-                new CustomDeliveryNpc( 1020337,635, new Vector3(171.312988f, 13.02367f, -89.951965f), "M'naago", 68541, 2), //(M'naago) Rhalgr's Reach(Gyr Abania)
-                new CustomDeliveryNpc( 1025878,613, new Vector3(343.984009f, -120.329468f, -306.019714f), "Kurenai", 68675, 3), //(Kurenai) The Ruby Sea(Othard)
-                new CustomDeliveryNpc( 1018393,478, new Vector3(-62.3016f, 206.6002f, 23.893f), "Adkiragh", 68713, 4), //(Adkiragh) Idyllshire(Dravania)
-                new CustomDeliveryNpc( 1031801,820, new Vector3(52.811401f, 82.993774f, -65.384949f), "Kai-Shirr", 69265, 5), //(Kai-Shirr) Eulmore(Eulmore)
-                new CustomDeliveryNpc( 1033543,886, new Vector3(113.389771f, -20.004639f, -0.961365f), "Ehll Tou", 69425, 6), //(Ehll Tou) The Firmament(Ishgard)
-                new CustomDeliveryNpc( 1035211,886, new Vector3(-115.1127f, 0f, -134.8367f), "Charlemend", 69615, 7)
-            };
-
-            using (var outputFile = new StreamWriter(@"G:\CustomDeliveryNpcs.json", false))
-            {
-                outputFile.Write(JsonConvert.SerializeObject(DeliveryNpcs, (Formatting)System.Xml.Formatting.Indented));
-            }
-
+            Log.Information("Nothing to test, this does nothing right now");
             TreeRoot.Stop("Stop Requested");
 
             return Task.FromResult(true);
         }
+
 
         private void LogPtr(IntPtr instancePointer)
         {
