@@ -27,3 +27,12 @@ This botbase will craft the set item using Lisbeth and turn it in until Max Seal
 * Craft - Set this to True if you want the Botbase to craft the item with Lisbeth rather than just turning in the items in your inventory.
 * ItemId - This is the Item ID of the item you want Lisbeth to create for seals.
 * SealReward - Set this to how many seals you get per turn in of the item, the botbase uses this to determine how many of the above item to make to get to max seals.
+
+### Ishgard Handin
+This will go to Ishgard and hand-in crafting and gathering skybuilders items. Kupo tickets will be redeemed after hitting 9 (so start it with under 9 tickets) and for crafting it'll just keep handing in when you're maxed on scrips....gathering just kind of breaks there. The code for the botbase includes Tasks which can be called with runcode's in orderbot to do the handins as well as a `<BuyWhiteScriptItem>` tag. There is also a bool in IshgardHandinBase.cs which you can set to true to have it discard all collectables which don't meet the cutoff. 
+```cs 
+public static bool DiscardCollectable = true;
+```
+
+### Out on a limb
+This is really a main botbase but down here because I'm not happy with it. It will win the game but after a random number of wins it starts winning 0 MGP. Seems like a server side restriction, so i have it stop once it starts winning 0.
