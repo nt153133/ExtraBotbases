@@ -19,6 +19,7 @@ using ff14bot.Navigation;
 using ff14bot.Pathing.Service_Navigation;
 using ff14bot.RemoteWindows;
 using LlamaLibrary;
+using LlamaLibrary.Enums;
 using LlamaLibrary.Extensions;
 using LlamaLibrary.Helpers;
 using LlamaLibrary.JsonObjects;
@@ -55,7 +56,12 @@ namespace LlamaBotBases.Tester
 
         private static readonly InventoryBagId[] SaddlebagIds =
         {
-            (InventoryBagId)0xFA0, (InventoryBagId)0xFA1//, (InventoryBagId) 0x1004,(InventoryBagId) 0x1005
+            (InventoryBagId) 0xFA0, (InventoryBagId) 0xFA1 //, (InventoryBagId) 0x1004,(InventoryBagId) 0x1005
+        };
+
+        private static readonly ItemUiCategory[] GatheringCategories =
+        {
+            ItemUiCategory.Lumber, ItemUiCategory.Stone, ItemUiCategory.Reagent, ItemUiCategory.Reagent, ItemUiCategory.Bone, ItemUiCategory.Ingredient
         };
 
         public TesterBase()
@@ -124,14 +130,39 @@ namespace LlamaBotBases.Tester
             Navigator.NavigationProvider = null;
         }
 
-        private Task<bool> Run()
+        private async Task<bool> Run()
         {
             Log.Information("Nothing to test, this does nothing right now");
+
+            //await HelperFunctions.ForceGetRetainerData();
+
+            var retainers = await HelperFunctions.GetOrderedRetainerArray(true);
+
+            foreach (var retainer in retainers)
+            {
+                await RetainerRoutine.SelectRetainer(retainer.Unique);
+
+                Log.Information("Should be at the retainer");
+
+                //await Coroutine.Sleep(5000);
+
+                var belts = InventoryManager.GetBagByInventoryBagId(InventoryBagId.Retainer_Market).Where(i => i.Item.EquipmentCatagory == ItemUiCategory.Waist);
+
+                foreach (var belt in belts)
+                {
+                    belt.RetainerRetrieveQuantity(belt.Count);
+                    await Coroutine.Sleep(1000);
+                }
+
+
+
+                await RetainerRoutine.DeSelectRetainer();
+            }
+
             TreeRoot.Stop("Stop Requested");
 
-            return Task.FromResult(true);
+            return true;
         }
-
 
         private void LogPtr(IntPtr instancePointer)
         {
@@ -173,17 +204,17 @@ namespace LlamaBotBases.Tester
                 sb2.AppendLine($"{name}, {pattern}");
             }
 
-            using (var outputFile = new StreamWriter(@"G:\AgentLL.csv", false))
+            using (var outputFile = new StreamWriter(@"G:\LLOffsets\AgentLL.csv", false))
             {
                 outputFile.Write(sb1.ToString());
             }
 
-            using (var outputFile = new StreamWriter(@"G:\LL.csv", false))
+            using (var outputFile = new StreamWriter(@"G:\LLOffsets\LL.csv", false))
             {
                 outputFile.Write(sb.ToString());
             }
 
-            using (var outputFile = new StreamWriter(@"G:\Constants.csv", false))
+            using (var outputFile = new StreamWriter(@"G:\LLOffsets\Constants.csv", false))
             {
                 outputFile.Write(sb2.ToString());
             }
@@ -267,7 +298,7 @@ namespace LlamaBotBases.Tester
                     if (t.FieldType == typeof(IntPtr))
                     {
                         //IntPtr ptr = new IntPtr(((IntPtr) t.GetValue(tp)).ToInt64() - Core.Memory.ImageBase.ToInt64());
-                        var ptr = (IntPtr)t.GetValue(tp);
+                        var ptr = (IntPtr) t.GetValue(tp);
                         stringBuilder.Append($"Struct{i + 88}_IntPtr{p1}, {Core.Memory.GetRelative(ptr).ToInt64()}\n");
 
                         //stringBuilder.Append(string.Format("\tPtr Offset_{0}: 0x{1:x}", p1, ptr.ToInt64()));
@@ -282,7 +313,7 @@ namespace LlamaBotBases.Tester
                 i++;
             }
 
-            using (var outputFile = new StreamWriter($"RB{Assembly.GetEntryAssembly().GetName().Version.Build}.csv", false))
+            using (var outputFile = new StreamWriter($@"G:\LLOffsets\RB{Assembly.GetEntryAssembly().GetName().Version.Build}.csv", false))
             {
                 outputFile.Write(stringBuilder.ToString());
             }
@@ -333,7 +364,6 @@ namespace LlamaBotBases.Tester
             functions.Sort();
             return functions;
         }
-
 
         public async Task<bool> CheckVentures()
         {
@@ -398,6 +428,25 @@ namespace LlamaBotBases.Tester
             }
 
             return true;
+        }
+
+        public static async Task LowerQualityAndCombine(InventoryBagId[] bags, ItemUiCategory[] categories)
+        {
+            var HQslots = InventoryManager.GetBagsByInventoryBagId(bags).Select(i => i.FilledSlots).SelectMany(x => x).Where(slot => categories.Contains(slot.Item.EquipmentCatagory) && slot.IsHighQuality);
+
+            foreach (var slot in HQslots)
+            {
+                var itemId = slot.RawItemId;
+                Log.Information($"Retrieve {slot.Name}");
+                await slot.TryRetrieveFromRetainer(slot.Count);
+                var newSlot = InventoryManager.FilledSlots.First(i => i.RawItemId == itemId);
+                Log.Information($"Lowering {newSlot.Name}");
+                newSlot.LowerQuality();
+                await Coroutine.Sleep(1000);
+                Log.Information($"Entrust {newSlot.Name}");
+                await newSlot.TryEntrustToRetainer(newSlot.Count);
+                await Coroutine.Sleep(100);
+            }
         }
     }
 }
