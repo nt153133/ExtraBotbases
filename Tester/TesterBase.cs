@@ -146,13 +146,30 @@ namespace LlamaBotBases.Tester
 
                 //await Coroutine.Sleep(5000);
 
-                var belts = InventoryManager.GetBagByInventoryBagId(InventoryBagId.Retainer_Market).FilledSlots.Where(i => i.Item.EquipmentCatagory == ItemUiCategory.Waist);
+                var belts = InventoryManager.GetBagByInventoryBagId(InventoryBagId.Retainer_Market).FilledSlots.Where(i => i.Item.EquipmentCatagory == (ItemUiCategory)39);
 
                 foreach (var belt in belts)
                 {
                     belt.RetainerRetrieveQuantity(belt.Count);
                     await Coroutine.Sleep(1000);
                 }
+
+                belts = InventoryManager.GetBagsByInventoryBagId(RetainerBagIds).SelectMany(i=> i.FilledSlots).Where(i => i.Item.EquipmentCatagory == (ItemUiCategory)39);
+
+                foreach (var belt in belts)
+                {
+                    belt.RetainerRetrieveQuantity(belt.Count);
+                    await Coroutine.Sleep(1000);
+                }
+
+                belts = InventoryManager.FilledSlots.Where(i => i.Item.EquipmentCatagory == (ItemUiCategory)39);
+
+                foreach (var belt in belts)
+                {
+                    belt.Discard();
+                    await Coroutine.Sleep(1000);
+                }
+
 
                 Log.Information("Should be done at the retainer");
 
