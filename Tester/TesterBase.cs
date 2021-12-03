@@ -163,16 +163,18 @@ namespace LlamaBotBases.Tester
                 }
                 Log.Information("Should be done at the retainer");
 
+                var belts2 = InventoryManager.FilledSlots.Where(i => i.Item.EquipmentCatagory == (ItemUiCategory)39);
+
+                foreach (var belt in belts2)
+                {
+                    belt.Discard();
+                    await Coroutine.Sleep(1000);
+                }
+
+
                 await RetainerRoutine.DeSelectRetainer();
             }
 
-            var belts2 = InventoryManager.FilledSlots.Where(i => i.Item.EquipmentCatagory == (ItemUiCategory)39);
-
-            foreach (var belt in belts2)
-            {
-                belt.Discard();
-                await Coroutine.Sleep(1000);
-            }
 
 
             TreeRoot.Stop("Stop Requested");
