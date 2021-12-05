@@ -522,25 +522,25 @@ namespace LlamaBotBases.OutOnALimb
                 if (e.ChatLogEntry.FullLine.IndexOf("手感", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     Log.Verbose("Not Close");
-                    HitResult = MiniGameResult.NotClose;
+                    hitResult = MiniGameResult.NotClose;
                     GamelogManager.MessageRecevied -= GamelogManagerOnMessageRecevied;
                 }
                 else if (e.ChatLogEntry.FullLine.IndexOf("什么东西", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     Log.Verbose("Close");
-                    HitResult = MiniGameResult.Close;
+                    hitResult = MiniGameResult.Close;
                     GamelogManager.MessageRecevied -= GamelogManagerOnMessageRecevied;
                 }
                 else if (e.ChatLogEntry.FullLine.IndexOf("相当接近", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     Log.Verbose("Very Close");
-                    HitResult = MiniGameResult.VeryClose;
+                    hitResult = MiniGameResult.VeryClose;
                     GamelogManager.MessageRecevied -= GamelogManagerOnMessageRecevied;
                 }
                 else if (e.ChatLogEntry.FullLine.IndexOf("正中目标", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     Log.Verbose("On Top");
-                    HitResult = MiniGameResult.OnTop;
+                    hitResult = MiniGameResult.OnTop;
                     GamelogManager.MessageRecevied -= GamelogManagerOnMessageRecevied;
                 }
             }
