@@ -132,10 +132,18 @@ namespace LlamaBotBases.Tester
 
         private async Task<bool> Run()
         {
-            Log.Information("Nothing to test, this does nothing right now");
+            Log.Information("Inventory cleaning");
 
-            //await HelperFunctions.ForceGetRetainerData();
+            await DumpArmory();
 
+            //await DumpClearInventory();
+
+            TreeRoot.Stop("Stop Requested");
+            return true;
+        }
+
+        private async Task GetBeltsFromREtainers()
+        {
             var retainers = await HelperFunctions.GetOrderedRetainerArray(true);
 
             foreach (var retainer in retainers)
@@ -146,7 +154,7 @@ namespace LlamaBotBases.Tester
 
                 //await Coroutine.Sleep(5000);
 
-                var belts = InventoryManager.GetBagByInventoryBagId(InventoryBagId.Retainer_Market).FilledSlots.Where(i => i.Item.EquipmentCatagory == (ItemUiCategory)39);
+                var belts = InventoryManager.GetBagByInventoryBagId(InventoryBagId.Retainer_Market).FilledSlots.Where(i => i.Item.EquipmentCatagory == (ItemUiCategory) 39);
 
                 foreach (var belt in belts)
                 {
@@ -154,16 +162,17 @@ namespace LlamaBotBases.Tester
                     await Coroutine.Sleep(1000);
                 }
 
-                belts = InventoryManager.GetBagsByInventoryBagId(RetainerBagIds).SelectMany(i=> i.FilledSlots).Where(i => i.Item.EquipmentCatagory == (ItemUiCategory)39);
+                belts = InventoryManager.GetBagsByInventoryBagId(RetainerBagIds).SelectMany(i => i.FilledSlots).Where(i => i.Item.EquipmentCatagory == (ItemUiCategory) 39);
 
                 foreach (var belt in belts)
                 {
                     belt.RetainerRetrieveQuantity(belt.Count);
                     await Coroutine.Sleep(1000);
                 }
+
                 Log.Information("Should be done at the retainer");
 
-                var belts2 = InventoryManager.FilledSlots.Where(i => i.Item.EquipmentCatagory == (ItemUiCategory)39);
+                var belts2 = InventoryManager.FilledSlots.Where(i => i.Item.EquipmentCatagory == (ItemUiCategory) 39);
 
                 foreach (var belt in belts2)
                 {
@@ -171,15 +180,10 @@ namespace LlamaBotBases.Tester
                     await Coroutine.Sleep(1000);
                 }
 
-
                 await RetainerRoutine.DeSelectRetainer();
+
+
             }
-
-
-
-            TreeRoot.Stop("Stop Requested");
-
-            return true;
         }
 
         private void LogPtr(IntPtr instancePointer)
@@ -191,6 +195,81 @@ namespace LlamaBotBases.Tester
         {
             Log.Information("LL hook");
             return Task.CompletedTask;
+        }
+
+        private async Task<bool> DumpClearInventory()
+        {
+            //Get rid of everything in Inventory
+
+            foreach (var slot in InventoryManager.FilledSlots.Where(i => i.HasMateria() && i.Item.EquipmentCatagory != ItemUiCategory.Materia))
+            {
+                for (int i = 0; i < slot.MateriaCount(); i++)
+                {
+                    await RemoveMateria(slot);
+                }
+            }
+
+            foreach (var slot in InventoryManager.FilledSlots.Where(i => i.SpiritBond == 100))
+            {
+                slot.ExtractMateria();
+                await Coroutine.Sleep(6000);
+            }
+
+            await LlamaLibrary.Utilities.Inventory.Desynth(InventoryManager.FilledSlots.Where(i => i.IsDesynthesizable));
+
+            return true;
+        }
+
+        public static async Task<bool> RemoveMateria(BagSlot bagSlot)
+        {
+            if (bagSlot != null && bagSlot.IsValid)
+            {
+                Log.Information($"Want to remove Materia from {bagSlot}");
+                var count = bagSlot.MateriaCount();
+                for (var i = 0; i < count; i++)
+                {
+                    Log.Information($"Removing materia {count - i}");
+                    bagSlot.RemoveMateria();
+                    await Coroutine.Wait(20000, () => Core.Memory.Read<uint>(LlamaLibrary.Memory.Offsets.Conditions + 0x27) != 0);
+                    await Coroutine.Wait(20000, () => Core.Memory.Read<uint>(LlamaLibrary.Memory.Offsets.Conditions + 0x27) == 0);
+                    await Coroutine.Sleep(1000);
+                }
+            }
+
+            Log.Information($"Item now has {bagSlot.MateriaCount()} materia affixed");
+
+            return true;
+        }
+
+        private async Task<bool> DumpArmory()
+        {
+            //Pull from armory non-GS items
+            foreach (var slot in InventoryManager.FilledArmorySlots)
+            {
+                if (InventoryManager.FreeSlots < 5)
+                {
+                    break;
+                }
+
+                var bag = InventoryManager.GetBagsByInventoryBagId(LlamaLibrary.Utilities.Inventory.InventoryBagIds)
+                    .Where(i => i.FreeSlots > 0).OrderByDescending(i => i.FreeSlots).FirstOrDefault();
+
+                if (bag == default)
+                {
+                    Log.Information("Out of bag space");
+                    break;
+                }
+
+                if (!GearsetManager.GearSets.SelectMany(i => i.Gear).Select(i => i.ItemId).Contains(slot.RawItemId))
+                {
+                    Log.Information($"{slot.Item.CurrentLocaleName} is not in gearset");
+                    slot.Move(bag.GetFirstFreeSlot());
+                    await Coroutine.Sleep(1000);
+                }
+            }
+
+            TreeRoot.Stop("Stop Requested");
+            return true;
         }
 
         private void DumpLLOffsets()
