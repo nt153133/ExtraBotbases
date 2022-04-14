@@ -17,6 +17,7 @@ using LlamaLibrary.Extensions;
 using LlamaLibrary.Helpers;
 using LlamaLibrary.Logging;
 using LlamaLibrary.Memory;
+using LlamaLibrary.RemoteAgents;
 using LlamaLibrary.RemoteWindows;
 using LlamaLibrary.Structs;
 using Newtonsoft.Json;
@@ -140,74 +141,9 @@ namespace LlamaBotBases.GCExpertTurnin
                 return;
             }
 
-            if (!GrandCompanySupplyList.Instance.IsOpen)
-            {
-                await GrandCompanyHelper.InteractWithNpc(GCNpc.Personnel_Officer);
-                await Coroutine.Wait(5000, () => SelectString.IsOpen);
-                if (!SelectString.IsOpen)
-                {
-                    Log.Error("Window is not open...maybe it didn't get to npc?");
-                }
+            await LlamaLibrary.Helpers.GrandCompanyHelper.GCHandInExpert();
 
-                SelectString.ClickSlot(0);
-                await Coroutine.Wait(5000, () => GrandCompanySupplyList.Instance.IsOpen);
-                if (!GrandCompanySupplyList.Instance.IsOpen)
-                {
-                    Log.Information("Window is not open...maybe it didn't get to npc?");
-                }
-            }
 
-            if (GrandCompanySupplyList.Instance.IsOpen)
-            {
-                await GrandCompanySupplyList.Instance.SwitchToExpertDelivery();
-                await Coroutine.Sleep(3000);
-
-                /*
-                var bools = GrandCompanySupplyList.Instance.GetTurninBools();
-                var windowItemIds = GrandCompanySupplyList.Instance.GetTurninItemsIds();
-                var required = GrandCompanySupplyList.Instance.GetTurninRequired();
-                var maxSeals = Core.Me.MaxGCSeals();*/
-
-                //var items = Core.Memory.ReadArray<GCTurninItem>(Offsets.GCTurnin, Offsets.GCTurninCount);
-                var i = 0;
-                var count = GrandCompanySupplyList.Instance.GetNumberOfTurnins(); //ConditionParser.ItemCount((uint) GCExpertSettings.Instance.ItemId);
-
-                if (count > 0)
-                {
-                    for (var index = 0; index < count; index++)
-                    {
-                        //var item = windowItemIds[index];
-                        //Log.Information($"{index}");
-                        GrandCompanySupplyList.Instance.ClickItem(0);
-                        await Coroutine.Wait(1000, () => SelectYesno.IsOpen);
-                        if (SelectYesno.IsOpen)
-                        {
-                            SelectYesno.Yes();
-                        }
-
-                        await Coroutine.Wait(5000, () => GrandCompanySupplyReward.Instance.IsOpen);
-                        GrandCompanySupplyReward.Instance.Confirm();
-                        await Coroutine.Wait(5000, () => GrandCompanySupplyList.Instance.IsOpen);
-                        i += 1;
-                        await Coroutine.Sleep(500);
-                    }
-                }
-
-                if (GrandCompanySupplyList.Instance.IsOpen)
-                {
-                    GrandCompanySupplyList.Instance.Close();
-                    await Coroutine.Wait(5000, () => SelectString.IsOpen);
-                    if (SelectString.IsOpen)
-                    {
-                        SelectString.ClickSlot((uint)(SelectString.LineCount - 1));
-                    }
-                }
-
-                /*if (Core.Me.GCSeals() > 200)
-                {
-                    await GrandCompanyShop.BuyKnownItem(21072, (int) (Core.Me.GCSeals() / 200));
-                }*/
-            }
         }
     }
 }
