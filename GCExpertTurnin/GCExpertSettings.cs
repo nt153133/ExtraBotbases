@@ -53,7 +53,7 @@ namespace LlamaBotBases.GCExpertTurnin
         }
 
         [Description("ItemId of item to craft")]
-        [DefaultValue(4380)] //shift +x
+        [DefaultValue(4173)] //shift +x
         public int ItemId
         {
             get => _itemId;
