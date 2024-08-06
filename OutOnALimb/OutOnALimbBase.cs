@@ -884,8 +884,13 @@ namespace LlamaBotBases.OutOnALimb
 
             //Regex TimeRegex = new Regex(@"Time Remaining: (\d):(\d+).*", RegexOptions.Compiled);
 
-            var offset0 = 458;
-            var offset2 = 352;
+#if !RB_DT
+            int offset0 = 0x1CA;
+            int offset2 = 0x160;
+#else
+         int offset0 = 0x1DA; //0F BF 93 ? ? ? ? 41 B1 ? 4C 8B 83 ? ? ? ? 48 8B CB C6 44 24 ? ? E8 ? ? ? ? 48 8B CB Add 3 Read32
+         int offset2 = 0x170; //4C 8B 83 ? ? ? ? 48 8B CB C6 44 24 ? ? E8 ? ? ? ? 48 8B CB Add 3 Read32
+#endif
             var count = 0;
 
             var windowByName = RaptureAtkUnitManager.GetWindowByName("SelectYesno");
